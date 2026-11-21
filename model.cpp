@@ -31,6 +31,43 @@ std::string lowerAscii(std::string s) {
     for (char& c : s) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
     return s;
 }
+Words parseTopics(const std::string& text) {
+    require(text.size() <= 160,"topic list must be at most 160 bytes");
+    if (text.find_first_not_of(' ') == std::string::npos) return {};
+    Words result;
+    std::size_t start = 0;
+    while (true) {
+        const std::size_t comma = text.find(',',start);
+        const std::string raw = lowerAscii(text.substr(start,comma == std::string::npos ? comma : comma-start));
+        std::string topic;
+        bool hasWord = false;
+        bool spaced = false;
+        for (char c : raw) {
+            if (c == ' ') { spaced = !topic.empty(); continue; }
+            const bool alnum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+            require(alnum || c == '+' || c == '#' || c == '-',"invalid character in a topic");
+            hasWord = hasWord || alnum;
+            if (spaced) topic += ' ';
+            spaced = false;
+            topic += c;
+        }
+        require(hasWord && topic.size() <= 24,"each topic needs a letter or digit and must fit in 24 bytes");
+        if (std::find(result.begin(),result.end(),topic) == result.end()) result.push_back(topic);
+        require(result.size() <= 8,"a book can have at most eight topics");
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+    std::sort(result.begin(),result.end());
+    return result;
+}
+std::string topicList(const Words& topics) {
+    std::string list;
+    for (const std::string& topic : topics) {
+        if (!list.empty()) list += ',';
+        list += topic;
+    }
+    return list;
+}
 Book& bookById(State& s, const std::string& id) {
     auto it = s.books.find(id); require(it != s.books.end(), "unknown book " + id); return it->second;
 }
@@ -47,7 +84,8 @@ int readyCount(const Book& b) {
 int available(const State& s, const Book& b) { return b.copies - activeCopies(s,b.id) - readyCount(b); }
 std::string bookLine(const State& s, const Book& b) {
     return b.id + " | " + b.title + " | " + b.author + " | copies=" + std::to_string(b.copies)
-        + " available=" + std::to_string(available(s,b)) + " ready=" + std::to_string(readyCount(b));
+        + " available=" + std::to_string(available(s,b)) + " ready=" + std::to_string(readyCount(b))
+        + (b.topics.empty() ? "" : " topics=" + topicList(b.topics));
 }
 std::string memberLine(const Member& m) {
     return m.id + " | " + m.name + " | " + tierName(m.tier) + " | " + m.contact;

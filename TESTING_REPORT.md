@@ -55,7 +55,7 @@ T15 checks a real close-and-reopen cycle. T16 and T17 cover refusal to start wit
 
 ## Browser workspace verification
 
-The terminal regression suite still passed **24 of 24** scenarios. The English browser workspace passed **8 of 8** API integration scenarios using the real C++ binary, loopback HTTP, and separate temporary databases. Run `make web-test` to reproduce these checks.
+The terminal regression suite still passed **24 of 24** scenarios. The English browser workspace passed **12 of 12** API integration scenarios using the real C++ binary, loopback HTTP, and separate temporary databases. Run `make web-test` to reproduce these checks.
 
 | ID | Input and expected result | Actual |
 | --- | --- | --- |
@@ -67,5 +67,11 @@ The terminal regression suite still passed **24 of 24** scenarios. The English b
 | W06 | Download the overdue report. The report should contain Database Design, Morgan Lam's ID, and nine days late on 24 November. | Pass |
 | W07 | Send requests with a different origin or host, invalid fields, and an unsupported action. They should be rejected and no draft should reach disk. | Pass |
 | W08 | Add and edit records through the browser API, change a reader tier, and restart against the same database. The existing loan should keep its original tier and both entry points should read the same records. | Pass |
+| W09 | Request alternatives for Practical C++. Expect three currently available books sharing a topic, and the correct single result for a topic search. | Pass |
+| W10 | Request Alex's recommendations. Expect the peer-supported title first, shared topics, and book metadata with no peer IDs, names, contacts or histories. | Pass |
+| W11 | Read an untagged version 1 database, add normalized topics, and reject a malformed topic list without changing the stored data. A new reader receives an empty list. | Pass |
+| W12 | Reopen the tagged sample, assign a copy for pickup, and repeat several peer loans. Expect the held book to be excluded, each reader to count once, and a title with only one peer to stay out. Clearing topics removes the topic match. | Pass |
 
 A browser walkthrough also verified the visible close-match search result, the return dialog, both pickup deadlines, and the checkout that cleared the queue. The original terminal build remains the CS Academy submission entry point.
+
+The browser walkthrough also checked the **Available alternatives** and **Join waitlist** actions alongside a zero-copy book. Alex’s reader record showed the peer-supported title first. Its demo email draft displayed the selected titles and a fictional address.

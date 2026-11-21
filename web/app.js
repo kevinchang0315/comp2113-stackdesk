@@ -103,12 +103,12 @@ function availability(row) {
 function catalogPanel(short) {
   return `<section class="panel book-catalog" data-short="${short}">
     <div class="panel-head"><div><h2>${short ? "Catalog at a glance" : "Book records"}</h2>
-      <p>Smart Search finds titles, authors, IDs and common typos.</p></div>
+      <p>Smart Search finds titles, authors, IDs and topics, even with common typos.</p></div>
       ${short ? '<a class="button small" href="#catalog">View catalog</a>' : ""}
     </div>
     <form class="search-bar" id="catalog-search" role="search">
       <div class="search-field">${icon("search")}<label for="search-term" class="sr-only">Smart Search</label>
-        <input id="search-term" name="term" type="search" placeholder="Search by title, author or ID" maxlength="160" value="${e(desk.searchTerm)}" autocomplete="off">
+        <input id="search-term" name="term" type="search" placeholder="Search by title, author, ID or topic" maxlength="160" value="${e(desk.searchTerm)}" autocomplete="off">
       </div>
       <label class="checkbox"><input id="available-filter" type="checkbox" ${desk.onlyAvailable ? "checked" : ""}> Available only</label>
     </form>
@@ -415,15 +415,69 @@ function confirmAction(action, data) {
     <input data-field type="hidden" value="${e(data.book)}"><input data-field type="hidden" value="${e(data.reader)}">`, label);
 }
 
+function topicsForm(id) {
+  const b = book(id);
+  form("Edit topics","set-topics",
+    `<p>Topics help readers find alternatives for ${e(b.title)}.</p>
+    <input data-field type="hidden" value="${e(id)}">
+    <label>Topics, separated by commas
+      <input data-field name="topics" value="${e(b.topics.join(","))}" maxlength="160"
+        placeholder="e.g. programming, c++, beginner">
+    </label>`,
+    "Save topics");
+}
+
+function suggestionReason(item) {
+  const reasons = [];
+  if (item.topics.length) reasons.push("Topics: " + item.topics.join(", "));
+  if (item.similarReaders) reasons.push("Also borrowed by readers with similar histories");
+  return reasons.join(" · ");
+}
+
+function suggestionList(picks, readerId = null) {
+  return `<ul class="suggestion-list">
+    ${picks.map(item => {
+      const args = readerId ? {book:item.id,reader:readerId} : {book:item.id};
+      return `<li class="suggestion">
+        <div><span class="cell-title">${e(item.title)}</span>
+          <span class="cell-sub">${e(item.author)} · ${plural(item.available,"available copy","available copies")}</span>
+          <span class="cell-sub">${e(suggestionReason(item))}</span>
+        </div>
+        ${button("Check out","borrow",args,"small")}
+      </li>`;
+    }).join("")}
+  </ul>`;
+}
+
+async function showSuggestions(kind, id, outletId, display) {
+  const outlet = document.getElementById(outletId);
+  try {
+    const picks = await api("/api/recommendations?" + kind + "=" + encodeURIComponent(id));
+    if (modal.open && outlet.isConnected) outlet.innerHTML = display(picks);
+  } catch (error) {
+    if (modal.open && outlet.isConnected)
+      outlet.innerHTML = `<p class="form-error" role="alert">${e(error.message)}</p>`;
+  }
+}
+
 function inspectBook(id) {
   const b = book(id);
-  const actions = button("Check out","borrow",{book:id},"primary") +
-    button("Reserve","reserve",{book:id}) + button("Edit book","edit-book",{book:id});
+  const primary = b.available
+    ? button("Check out","borrow",{book:id},"primary")
+    : button("Join waitlist","reserve",{book:id},"primary");
+  const actions = primary + button("Edit book","edit-book",{book:id}) + button("Edit topics","set-topics",{book:id});
+  const topics = b.topics.length ? `<div class="topic-list" aria-label="Topics">${b.topics.map(t => tag(t)).join("")}</div>` : "";
   showDialog(b.title, `<p>${e(b.id)} · ${e(b.author)}</p>
+    ${topics}
     <div class="detail-data"><div><b>${b.available}</b><small>Available</small></div>
     <div><b>${b.borrowed}</b><small>On loan</small></div><div><b>${b.ready}</b><small>Ready for pickup</small></div></div>
     <p>${b.holds.length ? plural(b.holds.length,"reservation") + " in the pickup queue." : "No current reservations."}</p>
-    <div class="actions">${actions}</div>`);
+    <div class="actions">${actions}</div>
+    ${b.available ? "" : `<section class="suggestion-section" aria-label="Available alternatives">
+      <h3>Available alternatives</h3><div id="book-picks" aria-live="polite"><p>Finding books with shared topics…</p></div>
+    </section>`}`);
+  if (!b.available) showSuggestions("book",id,"book-picks",picks =>
+    picks.length ? suggestionList(picks) : "<p>No available books share this title's topics.</p>");
 }
 
 function inspectReader(id) {
@@ -431,10 +485,64 @@ function inspectReader(id) {
   const history = desk.data.loans.filter(l => l.reader === id).reverse();
   showDialog(m.name, `<p>${e(m.id)} · ${tier(m.tier)} · ${e(m.contact)}</p>
     <div class="actions">${button("Edit reader","edit-reader",{reader:id})}${button("New loan","borrow",{reader:id},"primary")}</div>
+    <section class="suggestion-section" aria-label="Recommended for this reader">
+      <h3>Recommended for ${e(m.name)}</h3>
+      <div id="reader-picks" aria-live="polite"><p>Finding available recommendations…</p></div>
+    </section>
     <div class="actions"><h3>Loan history</h3></div>
     ${history.length ? `<ul class="history-list">${history.map(l =>
       `<li><span class="cell-title">${e(bookName(l.book))}</span><span class="cell-sub">${l.returned ? "Returned " + d(l.returned) : "Due " + d(l.due)}</span></li>`).join("")}</ul>` :
       "<p>No recorded loans.</p>"}`);
+  showSuggestions("reader",id,"reader-picks",picks => {
+    if (!picks.length) return "<p>No available recommendations from this reader's history.</p>";
+    return suggestionList(picks,id) + `<div class="actions">${button("Preview email draft","draft",{reader:id})}</div>`;
+  });
+}
+
+function emailDraft(id) {
+  const m = reader(id);
+  showDialog("Recommendation email draft",
+    '<div id="email-draft" aria-live="polite"><p>Preparing available titles…</p></div>');
+  showSuggestions("reader",id,"email-draft",picks => {
+    if (!picks.length) return "<p>There are no available recommendations to include.</p>";
+    const subject = "Your StackDesk reading recommendations";
+    const message = [
+      "Hi " + m.name + ",", "",
+      "Here are a few books you might like that are currently available at the library:", "",
+      ...picks.map(item => "- " + item.title + " by " + item.author + " (" + item.id + ")"),
+      "", "Availability can change. Please check with the library desk before visiting.", "", "StackDesk Library",
+    ].join("\n");
+    const address = m.contact.trim();
+    const hasEmail = /^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(address);
+    const [mailbox,domain] = hasEmail ? address.split("@") : ["",""];
+    const compose = "mailto:" + encodeURIComponent(mailbox) + "@" + domain +
+      "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message.replace(/\n/g,"\r\n"));
+    return `<dl class="draft-info">
+      <dt>To</dt><dd>${hasEmail ? e(address) : "No email on file"}</dd>
+      <dt>Subject</dt><dd>${e(subject)}</dd>
+    </dl>
+    <label class="draft-body">Message<textarea id="recommendation-message" rows="10" readonly>${e(message)}</textarea></label>
+    <div class="actions">
+      ${button("Copy message","copy-draft")}
+      ${hasEmail && !desk.data.demo ? `<a class="button primary" href="${e(compose)}">Open in mail app</a>` : ""}
+      ${button("Back to reader","reader",{reader:id})}
+    </div>
+    <p id="draft-status" class="draft-status" role="status">${desk.data.demo ? "Demo contact. Use Copy message to try the draft." :
+      hasEmail ? "Review the draft before opening it in your mail app." : "Add an email address to open this draft in a mail app."}</p>`;
+  });
+}
+
+async function copyDraft() {
+  const text = document.getElementById("recommendation-message");
+  const status = document.getElementById("draft-status");
+  try {
+    await navigator.clipboard.writeText(text.value);
+    status.textContent = "Message copied.";
+  } catch {
+    text.focus();
+    text.select();
+    status.textContent = "Press Control+C or Command+C to copy the selected message.";
+  }
 }
 
 function nextDate(day, count) {
@@ -447,6 +555,9 @@ function actionClick(data) {
   switch (data.do) {
     case "close": modal.close(); break;
     case "book": inspectBook(data.book); break;
+    case "set-topics": topicsForm(data.book); break;
+    case "draft": emailDraft(data.reader); break;
+    case "copy-draft": copyDraft(); break;
     case "reader": inspectReader(data.reader); break;
     case "add-book": case "edit-book": bookForm(data.do,data.book); break;
     case "add-reader": case "edit-reader": readerForm(data.do,data.reader); break;
@@ -517,6 +628,7 @@ document.addEventListener("submit", async event => {
     modal.close();
     render();
     if (desk.searchTerm.trim()) scheduleSearch(true);
+    if (target.dataset.command === "set-topics") inspectBook(args[0]);
     flash(result.message);
   } catch (problem) {
     error.textContent = problem.message;

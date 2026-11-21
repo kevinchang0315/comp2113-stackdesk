@@ -16,11 +16,16 @@ std::string catalog(State& s, const std::string& action, const Words& a) {
         }
         return out.empty() ? "No matching books." : out;
     }
+    if (action == "set-topics") {
+        Book& b = bookById(s,a[0]);
+        b.topics = parseTopics(a[1]);
+        return "Updated topics for " + b.id;
+    }
     validId(a[0]); validText(a[1]); validText(a[2]);
     int copies = number(a[3],1,9999);
     if (action == "add-book") {
         require(!s.books.count(a[0]), "book ID already exists");
-        s.books.emplace(a[0], Book{a[0],a[1],a[2],copies,{}});
+        s.books.emplace(a[0], Book{a[0],a[1],a[2],copies,{},{}});
         return "Added book " + a[0];
     }
     Book& b = bookById(s,a[0]);

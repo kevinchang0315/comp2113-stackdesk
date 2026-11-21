@@ -11,7 +11,7 @@ namespace desk {
 using Words = std::vector<std::string>;
 // Ready offers form a prefix of each FIFO queue. Waiting entries have no offer date.
 struct Hold { std::string reader; bool ready; Date offered; };
-struct Book { std::string id, title, author; int copies; std::deque<Hold> holds; };
+struct Book { std::string id, title, author; int copies; std::deque<Hold> holds; Words topics; };
 struct Member { std::string id, name, contact; Tier tier; };
 // Keep the issue tier with the loan so reader edits do not change existing terms.
 struct Loan {
@@ -30,6 +30,9 @@ void validId(const std::string& id);
 void validText(const std::string& field);
 int number(const std::string& digits, int low, int high);
 std::string lowerAscii(std::string s);
+// Normalize a comma-separated topic list. An empty list removes the book's topics.
+Words parseTopics(const std::string& text);
+std::string topicList(const Words& topics);
 Book& bookById(State& s, const std::string& id);
 Member& memberById(State& s, const std::string& id);
 int activeCopies(const State& s, const std::string& book);

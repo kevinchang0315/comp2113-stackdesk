@@ -1,4 +1,5 @@
 #include "storage.h"
+#include <algorithm>
 #include <fstream>
 #include <set>
 #include <utility>
@@ -71,13 +72,19 @@ void validate(const State& s) {
         require(free >= 0 && (!waitingSeen || free == 0),"stock contradicts loans or reservations");
     }
 }
-void readRow(State& s, const Words& w) {
+void readRow(State& s, const Words& w, bool hasTopics) {
     require(!w.empty(),"empty record");
     if (w[0] == "BOOK") {
         require(w.size() == 5,"bad book record length");
         validId(w[1]); validText(w[2]); validText(w[3]);
-        Book b{w[1],w[2],w[3],number(w[4],1,9999),{}};
+        Book b{w[1],w[2],w[3],number(w[4],1,9999),{},{}};
         require(s.books.emplace(w[1],std::move(b)).second,"duplicate book");
+    } else if (w[0] == "TOPICS") {
+        require(hasTopics && w.size() == 3,"invalid book topics record");
+        Book& b = bookById(s,w[1]);
+        require(b.topics.empty(),"duplicate topics record");
+        b.topics = parseTopics(w[2]);
+        require(!b.topics.empty(),"empty topics record");
     } else if (w[0] == "READER") {
         require(w.size() == 5,"bad reader record length");
         validId(w[1]); validText(w[2]); validText(w[3]);
@@ -96,11 +103,15 @@ void readRow(State& s, const Words& w) {
     } else throw std::runtime_error("unknown record type " + w[0]);
 }
 std::string serialize(const State& s) {
-    std::string out = "STACKDESK 1\nDATE " + s.day.str() + '\n';
+    const bool hasTopics = std::any_of(s.books.begin(),s.books.end(),
+                                       [](const auto& entry){return !entry.second.topics.empty();});
+    std::string out = std::string(hasTopics ? "STACKDESK 2\nDATE " : "STACKDESK 1\nDATE ") + s.day.str() + '\n';
     for (const auto& item : s.books) {
         const Book& b = item.second;
         out += "BOOK " + quote(b.id) + ' ' + quote(b.title) + ' ' + quote(b.author)
             + ' ' + std::to_string(b.copies) + '\n';
+        if (!b.topics.empty())
+            out += "TOPICS " + quote(b.id) + ' ' + quote(topicList(b.topics)) + '\n';
     }
     for (const auto& item : s.members) {
         const Member& m = item.second;
@@ -144,8 +155,10 @@ State Storage::load(Date day) const {
     std::string line;
     int lineNo = 1;
     try {
-        require(static_cast<bool>(std::getline(in,line)) && split(line) == Words{"STACKDESK","1"},
-                "unrecognised database header");
+        require(static_cast<bool>(std::getline(in,line)),"missing database header");
+        const Words header = split(line);
+        const bool hasTopics = header == Words{"STACKDESK","2"};
+        require(hasTopics || header == Words{"STACKDESK","1"},"unrecognised database header");
         ++lineNo;
         require(static_cast<bool>(std::getline(in,line)),"missing database date");
         Words date = split(line);
@@ -159,7 +172,7 @@ State Storage::load(Date day) const {
             if (w.empty()) continue;
             require(!ended,"unexpected record after END");
             if (w == Words{"END"}) ended = true;
-            else readRow(s,w);
+            else readRow(s,w,hasTopics);
         }
         require(ended && in.eof() && !in.bad(),"snapshot is incomplete or unreadable");
         validate(s);

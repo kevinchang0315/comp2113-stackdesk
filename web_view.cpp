@@ -1,4 +1,5 @@
 #include "web_view.h"
+#include "recommendations.h"
 #include <algorithm>
 #include <initializer_list>
 #include <sstream>
@@ -99,7 +100,9 @@ std::string webSnapshot(const State& state, const Policies& policies) {
         const int ready = readyCount(book);
         out << "{\"id\":" << json(book.id) << ",\"title\":" << json(book.title) << ",\"author\":" << json(book.author)
             << ",\"copies\":" << book.copies << ",\"available\":" << (book.copies-borrowed-ready)
-            << ",\"borrowed\":" << borrowed << ",\"ready\":" << ready << ",\"holds\":";
+            << ",\"borrowed\":" << borrowed << ",\"ready\":" << ready << ",\"topics\":";
+        array(out,book.topics,[&](const std::string& topic){ out << json(topic); });
+        out << ",\"holds\":";
         array(out,book.holds,[&](const Hold& hold) {
             out << "{\"reader\":" << json(hold.reader) << ",\"readyThrough\":"
                 << (hold.ready ? json(hold.offered.plus(2).str()) : "null") << '}';
@@ -148,6 +151,7 @@ std::string searchCatalog(const State& state, const std::string& query) {
         const Words title = tokens(book.title);
         const Words author = tokens(book.author);
         const Words id = tokens(book.id);
+        const Words topics = tokens(topicList(book.topics));
         int points = 0;
         bool fuzzy = false;
         bool matched = true;
@@ -155,6 +159,7 @@ std::string searchCatalog(const State& state, const std::string& query) {
             Score best;
             consider(best,word,title,12,true);
             consider(best,word,author,4,true);
+            consider(best,word,topics,7,false);
             consider(best,word,id,0,false);
             if (!best.points) { matched = false; break; }
             points += best.points;
@@ -169,6 +174,20 @@ std::string searchCatalog(const State& state, const std::string& query) {
     std::ostringstream out;
     array(out,matches,[&](const Match& match) {
         out << "{\"id\":" << json(match.book->id) << ",\"fuzzy\":" << (match.fuzzy ? "true" : "false") << '}';
+    });
+    return out.str();
+}
+
+std::string webRecommendations(const State& state, const std::string& id, bool byReader) {
+    const auto suggestions = byReader ? readerRecommendations(state,id) : availableAlternatives(state,id);
+    std::ostringstream out;
+    array(out,suggestions,[&](const Suggestion& suggestion) {
+        const Book& book = state.books.at(suggestion.book);
+        out << "{\"id\":" << json(book.id) << ",\"title\":" << json(book.title)
+            << ",\"author\":" << json(book.author) << ",\"available\":" << available(state,book)
+            << ",\"similarReaders\":" << (suggestion.peers ? "true" : "false") << ",\"topics\":";
+        array(out,suggestion.topics,[&](const std::string& topic){ out << json(topic); });
+        out << '}';
     });
     return out.str();
 }

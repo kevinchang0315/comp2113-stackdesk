@@ -20,7 +20,7 @@ ASSETS = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
 }
 ACTIONS = {
-    "add-book": 4, "edit-book": 4, "add-reader": 4, "edit-reader": 4,
+    "add-book": 4, "edit-book": 4, "set-topics": 2, "add-reader": 4, "edit-reader": 4,
     "borrow": 2, "return": 2, "renew": 2, "reserve": 2, "cancel-hold": 2, "advance": 1,
 }
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
@@ -91,6 +91,12 @@ class Desk:
         with self.lock:
             return json.loads(self._run(f"catalog-search {field}\n"))
 
+    def recommendations(self, kind, item_id):
+        command = "recommendations-reader" if kind == "reader" else "recommendations-book"
+        field = desk_argument(item_id)
+        with self.lock:
+            return json.loads(self._run(f"{command} {field}\n"))
+
     def act(self, name, arguments):
         if not isinstance(name, str) or name not in ACTIONS:
             raise ApiError(HTTPStatus.BAD_REQUEST, "Unknown desk action.")
@@ -122,6 +128,13 @@ add-book BK410 "Algorithms in Practice" "Lena Torres" 3
 add-book BK532 "Database Design" "Nora Bennett" 2
 add-book BK608 "The Pragmatic Programmer" "Andrew Hunt & David Thomas" 2
 add-book BK719 "Introduction to Linear Algebra" "Gilbert Strang" 2
+set-topics BK101 "C++, programming, beginner"
+set-topics BK202 "data structures, algorithms, programming"
+set-topics BK314 "computer architecture, systems"
+set-topics BK410 "algorithms, problem solving, programming"
+set-topics BK532 "databases, SQL"
+set-topics BK608 "programming, software craft"
+set-topics BK719 "mathematics, linear algebra"
 add-reader S01 "Alex Chan" alex@example.invalid student
 add-reader F01 "Taylor Lee" taylor@example.invalid faculty
 add-reader S02 "Jamie Ho" jamie@example.invalid student
@@ -130,6 +143,14 @@ add-reader F02 "Riley Wong" riley@example.invalid faculty
 add-reader S04 "Sam Park" sam@example.invalid student
 borrow BK532 S03
 borrow BK608 S04
+borrow BK101 F01
+return BK101 F01
+borrow BK608 F01
+return BK608 F01
+borrow BK101 F02
+return BK101 F02
+borrow BK608 F02
+return BK608 F02
 advance 2026-11-21
 return BK608 S04
 borrow BK101 S01
@@ -211,6 +232,14 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == "/api/search":
                 term = parse_qs(url.query, keep_blank_values=True).get("q", [""])[0]
                 self.send_json(HTTPStatus.OK, desk.search(term))
+            elif url.path == "/api/recommendations":
+                params = parse_qs(url.query, keep_blank_values=True)
+                if len(params) != 1:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "Choose a book or a reader.")
+                kind, values = next(iter(params.items()))
+                if kind not in {"book", "reader"} or len(values) != 1 or not values[0]:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "Choose a valid book or reader ID.")
+                self.send_json(HTTPStatus.OK, desk.recommendations(kind, values[0]))
             elif url.path == "/api/overdue.csv":
                 self.send_data(HTTPStatus.OK, desk.overdue_csv(), "text/csv; charset=utf-8", "stackdesk-overdue.csv")
             else:

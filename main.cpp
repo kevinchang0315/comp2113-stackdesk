@@ -20,6 +20,7 @@ const std::vector<Command> commands{
     {"find-book", "Search titles, authors or IDs", Group::Books, {"Search text"}, false},
     {"edit-book", "Edit book details and stock", Group::Books, {"Book ID","New title","New author","Total copies"}, true},
     {"books", "List books", Group::Books, {}, false},
+    {"set-topics", "Edit topics on a book", Group::Books, {"Book ID","Topics separated by commas"}, true},
     {"add-reader", "Register a reader", Group::Readers, {"Reader ID","Name","Contact","Tier (STUDENT/FACULTY)"}, true},
     {"reader", "View a reader by ID", Group::Readers, {"Reader ID"}, false},
     {"find-reader", "Search readers by name or ID", Group::Readers, {"Search text"}, false},
@@ -39,7 +40,9 @@ const std::vector<Command> commands{
     {"date", "Show the business date", Group::Clock, {}, false},
     {"advance", "Advance the business date in demo mode", Group::Clock, {"YYYY-MM-DD"}, true},
     {"snapshot", "Print the browser snapshot", Group::Web, {}, false},
-    {"catalog-search", "Rank catalog matches", Group::Web, {"Search text"}, false}
+    {"catalog-search", "Rank catalog matches", Group::Web, {"Search text"}, false},
+    {"recommendations-book", "Suggest available books with shared topics", Group::Web, {"Book ID"}, false},
+    {"recommendations-reader", "Suggest books for a reader", Group::Web, {"Reader ID"}, false}
 };
 const std::pair<Group,const char*> groups[]{
     {Group::Books,"Book catalog"}, {Group::Readers,"Reader registry"},
@@ -111,7 +114,9 @@ private:
             }
             return reports(s,c.name);
         case Group::Web:
-            return c.name == "snapshot" ? webSnapshot(s,policies_) : searchCatalog(s,a[0]);
+            if (c.name == "snapshot") return webSnapshot(s,policies_);
+            if (c.name == "catalog-search") return searchCatalog(s,a[0]);
+            return webRecommendations(s,a[0],c.name == "recommendations-reader");
         case Group::Clock:
             if (c.name == "date") return s.day.str();
             require(fixedDate_,"advance requires --date at startup");

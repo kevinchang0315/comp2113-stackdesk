@@ -27,9 +27,19 @@ Open the loopback address printed in the terminal, normally http://127.0.0.1:876
 
 For everyday use, run `make web`. The browser and the numbered menu both use `stackdesk.db` by default. To open a specific database or another local port, build with `make` and run `python3 web/server.py --db example.db --port 8766`. The server listens only on the local machine. Stop it with Ctrl+C. The coursework build on CS Academy uses `make` and `./main`, with no Python requirement for the terminal program.
 
-The workspace has an overview, editable catalog and reader records, circulation, reservation queues and reports with CSV download. **Smart Search** ranks title, author and ID matches in C++. It accepts multiple keywords, prefixes and one spelling edit or transposition in eligible words. For example, `pratical c++` finds *Practical C++*. Search runs entirely offline and can be filtered to currently available copies.
+The workspace has an overview, editable catalog and reader records, circulation, reservation queues and reports with CSV download. **Smart Search** ranks title, author and ID matches in C++. It searches titles, authors, IDs and topics. It accepts multiple keywords, prefixes and one spelling edit or transposition in eligible words. For example, `pratical c++` finds *Practical C++*. Search runs entirely offline and can be filtered to currently available copies.
 
 The browser sends actions to a small Python standard library server in `web/server.py`. It dispatches them to the same compiled C++ program, which validates actions and saves the database. C++ also supplies the JSON snapshot and ranked search results from `web_view.cpp`. Run `make web-test` for the browser API scenarios.
+
+## Recommendations and email drafts
+
+- **Available alternatives.** Open a book with no available copies. The book detail offers **Join waitlist** and shows up to three available alternatives, ordered by the number of shared topics. You can check out a recommended book from the list.
+- **Personal recommendations.** Open a reader record. New titles rank by recurring topics in that reader's checkout history and by borrowing overlap with other readers. A peer signal requires at least two distinct readers with a shared title. The list hides previously borrowed titles, reserved copies and the identities of other readers.
+- **Email draft.** Choose **Preview email draft** on the reader record. Copy the draft into Outlook or open it in the default mail app from a regular desk with an email address on file. The demo uses fictional addresses and provides the copy action. A staff member reviews and sends the message from their mail app.
+
+Use **Edit topics** in a book detail to add up to eight entries separated by commas. A blank list clears the topics. In batch mode the equivalent is `set-topics BK101 "c++, programming, beginner"`. The C++ database loader opens the original snapshot files and uses snapshot version 2 when it saves a catalog with topics.
+
+To try both recommendation paths, run `make web-demo`. Look up **Practical C++** in Catalog to see its available alternatives, then open **Alex Chan** in Readers. Alex's top result uses both programming topics and a peer signal. The browser API tests verify both cases and the exclusion of copies reserved for pickup.
 
 ## Desk workflow
 

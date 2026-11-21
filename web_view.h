@@ -6,5 +6,6 @@ namespace desk {
 std::string webSnapshot(const State& state, const Policies& policies);
 // Return ranked catalog matches as JSON. Exact and prefix matches outrank spelling corrections.
 std::string searchCatalog(const State& state, const std::string& query);
+std::string webRecommendations(const State& state, const std::string& id, bool byReader);
 }
 #endif

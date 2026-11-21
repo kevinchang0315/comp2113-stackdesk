@@ -7,7 +7,7 @@ LDLIBS ?=
 STANDARD := -std=c++17 -pedantic-errors
 PYTHON ?= python3
 TARGET := main
-SOURCES := main.cpp model.cpp date.cpp policy.cpp catalog.cpp readers.cpp circulation.cpp reservations.cpp reports.cpp storage.cpp web_view.cpp
+SOURCES := main.cpp model.cpp date.cpp policy.cpp catalog.cpp readers.cpp circulation.cpp reservations.cpp reports.cpp storage.cpp web_view.cpp recommendations.cpp
 OBJECTS := $(SOURCES:%.cpp=build/%.o)
 
 .PHONY: all clean test demo web web-demo web-test

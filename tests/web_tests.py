@@ -64,6 +64,10 @@ def find(port, query):
     return request(port, "/api/search?q=" + quote(query))
 
 
+def recommendations(port, kind, ident):
+    return request(port, "/api/recommendations?" + kind + "=" + quote(ident))
+
+
 def demo_flow(database):
     with running(database, demo=True) as port:
         html, headers = request(port, "/")
@@ -91,6 +95,21 @@ def demo_flow(database):
         assert find(port, "pracitcal") == [{"id":"BK101","fuzzy":True}]
         assert find(port, "quantum astrophysics") == []
         print("PASS W03 exact ID, multi-token author/title and spelling correction")
+
+        alternatives = recommendations(port, "book", "BK101")
+        assert [x["id"] for x in alternatives] == ["BK202","BK410","BK608"]
+        assert all(x["available"] > 0 and x["topics"] == ["programming"] and not x["similarReaders"]
+                   for x in alternatives)
+        assert find(port, "software craft") == [{"id":"BK608","fuzzy":False}]
+        print("PASS W09 available alternatives cap and topic search")
+
+        picks = recommendations(port, "reader", "S01")
+        assert [x["id"] for x in picks] == ["BK608","BK202","BK410"]
+        assert picks[0]["similarReaders"] and picks[0]["topics"] == ["programming"]
+        assert set(picks[0]) == {"id","title","author","available","similarReaders","topics"}
+        request(port,"/api/recommendations?book=BK101&reader=S01",status=400)
+        request(port,"/api/recommendations?reader=UNKNOWN",status=422)
+        print("PASS W10 history and peer signals without exposing peer records")
 
         before = database.read_bytes()
         blocked = action(port, "borrow", "BK101", "S02", status=422)
@@ -153,8 +172,56 @@ def persistent_flow(database):
     print("PASS W08 normal desk edits, restart and CLI compatibility with the same database")
 
 
+def topic_and_peer_edges(database):
+    with running(database) as port:
+        for ident in ("ROOT","ALT","HELD","PEER","SINGLE"):
+            action(port,"add-book",ident,ident+" book","Test Author","1")
+        for ident in ("ME","P1","P2","P3","R4","NEW"):
+            action(port,"add-reader",ident,"Reader "+ident,ident+"@example.invalid","STUDENT")
+        assert database.read_text().startswith("STACKDESK 1\n")
+
+    # Reopen a legacy file with the new storage reader, then save topics in version 2.
+    with running(database) as port:
+        assert not book(request(port,"/api/state"),"ROOT")["topics"]
+        action(port,"set-topics","ROOT"," C++ ,  Data  Structures, c++ ")
+        action(port,"set-topics","ALT","c++")
+        action(port,"set-topics","HELD","data structures")
+        before = database.read_bytes()
+        action(port,"set-topics","ROOT","tag, ,other",status=422)
+        assert database.read_bytes() == before and before.startswith(b"STACKDESK 2\n")
+        assert recommendations(port,"reader","NEW") == []
+        print("PASS W11 legacy database load and validation of normalized topics")
+
+    with running(database) as port:
+        assert book(request(port,"/api/state"),"ROOT")["topics"] == ["c++","data structures"]
+
+        def read(book_id, reader_id):
+            action(port,"borrow",book_id,reader_id)
+            action(port,"return",book_id,reader_id)
+
+        read("ROOT","ME")
+        read("ROOT","P1")
+        read("ROOT","P2")
+        read("PEER","P1")
+        read("PEER","P2")
+        for _ in range(2):
+            read("SINGLE","P1")
+        action(port,"borrow","HELD","P3")
+        action(port,"reserve","HELD","R4")
+        action(port,"return","HELD","P3")
+        assert [x["id"] for x in recommendations(port,"book","ROOT")] == ["ALT"]
+        reader_picks = recommendations(port,"reader","ME")
+        assert [x["id"] for x in reader_picks] == ["PEER","ALT"]
+        assert reader_picks[0]["similarReaders"] and reader_picks[0]["topics"] == []
+        assert not reader_picks[1]["similarReaders"]
+        action(port,"set-topics","ALT","")
+        assert recommendations(port,"book","ROOT") == []
+        print("PASS W12 held books excluded, peer votes are distinct, and topics can be cleared")
+
+
 if __name__ == "__main__":
     with TemporaryDirectory(prefix="stackdesk-web-test-") as paths:
         demo_flow(Path(paths) / "demo.db")
         persistent_flow(Path(paths) / "live.db")
-    print("8 browser API scenarios passed.")
+        topic_and_peer_edges(Path(paths) / "topics.db")
+    print("12 browser API scenarios passed.")

@@ -71,3 +71,13 @@ The following project requests prompted the sample visualization and then the in
 Codex used actual C++ command outputs to verify the four states in the first visualization. It then implemented an English workspace with a local HTTP adapter and added ranked keyword searches with single-edit spelling tolerance in C++. Browser actions reuse the same checkout, return, reservation and persistence code as the numbered menu. The browser searches run offline by comparing text and do not use a language-model service.
 
 The verification used the 24 existing terminal cases, eight new browser API scenarios, and an actual browser walkthrough. The walkthrough returned the book, advanced the date and checked out the reserved copy as the next eligible reader. It also checked that searching for `pratical c++` highlighted a close match, and the API tests reopened a persistent database to confirm that browser edits still load in the terminal program.
+
+## Book recommendations follow-up
+
+~~~text
+对,你就写这个;然后现在你觉得是不是可以加一个就是哎,我有这个人的借书历史记录,我们通过他个人的历史记录和同类人推荐的,给他的outlook推送
+~~~
+
+Codex added local C++ ranking for available alternatives and reader-specific recommendations. It used sets of distinct previously borrowed books to identify overlap between readers. At least two distinct readers must support a title before peer borrowing affects the result. The desk displays aggregate reasons and prepares an email draft for staff review. Automatic mail delivery is outside this version.
+
+The new API cases check that an earlier database still loads, topic edits survive reopening, held titles stay out of results, and repeat borrowing by one peer cannot stand in for a second peer.
