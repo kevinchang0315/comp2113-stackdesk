@@ -1,12 +1,13 @@
 #include "desk.h"
 #include "storage.h"
+#include "web_view.h"
 #include <algorithm>
 #include <iostream>
 #include <utility>
 using namespace desk;
 
 namespace {
-enum class Group { Books, Readers, Loans, Holds, Reports, Clock };
+enum class Group { Books, Readers, Loans, Holds, Reports, Clock, Web };
 struct Command {
     std::string name, label;
     Group group;
@@ -36,7 +37,9 @@ const std::vector<Command> commands{
     {"overdue", "List overdue loans", Group::Reports, {}, false},
     {"export-overdue", "Export overdue loans to a new CSV", Group::Reports, {"New CSV path"}, false},
     {"date", "Show the business date", Group::Clock, {}, false},
-    {"advance", "Advance the business date in demo mode", Group::Clock, {"YYYY-MM-DD"}, true}
+    {"advance", "Advance the business date in demo mode", Group::Clock, {"YYYY-MM-DD"}, true},
+    {"snapshot", "Print the browser snapshot", Group::Web, {}, false},
+    {"catalog-search", "Rank catalog matches", Group::Web, {"Search text"}, false}
 };
 const std::pair<Group,const char*> groups[]{
     {Group::Books,"Book catalog"}, {Group::Readers,"Reader registry"},
@@ -107,6 +110,8 @@ private:
                 return "Exported overdue report: " + a[0];
             }
             return reports(s,c.name);
+        case Group::Web:
+            return c.name == "snapshot" ? webSnapshot(s,policies_) : searchCatalog(s,a[0]);
         case Group::Clock:
             if (c.name == "date") return s.day.str();
             require(fixedDate_,"advance requires --date at startup");

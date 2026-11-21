@@ -1,6 +1,6 @@
 # StackDesk Library Management System
 
-StackDesk is a terminal application for a small campus lending desk. Staff can register readers, manage the book catalogue, issue and return copies, and run a fair pickup queue. The desk tracks copy availability and overdue loans across restarts.
+StackDesk is a C++ application for a small campus lending desk. It offers a numbered terminal menu and an English browser workspace. Staff can register readers, manage the book catalogue, issue and return copies, and run a fair pickup queue. The desk tracks copy availability and overdue loans across restarts.
 
 ## Run on CS Academy
 
@@ -14,6 +14,22 @@ make
 The Makefile builds with `g++ -std=c++17 -pedantic-errors`. The application uses the C++ standard library and requires no external packages. To build without Make, run `g++ -std=c++17 -pedantic-errors *.cpp -o main`. A successful change is saved automatically. The default database file is `stackdesk.db` in the current working directory.
 
 For a repeatable tour that runs in a temporary directory, use `make demo`. Run `make test` with Python 3.8 or later to verify the compiled program. The automated tests and demonstration use fictional reader records.
+
+## Run the English browser workspace
+
+Run from the repository root on a machine with a C++17 toolchain and Python 3.8 or later.
+
+~~~bash
+make web-demo
+~~~
+
+Open the loopback address printed in the terminal, normally http://127.0.0.1:8765/. The demo starts at 21 November 2026 with fictional records in a temporary database. Return **Practical C++** in Circulation, then check Reservations. Taylor has through 23 November to collect it. Use **Advance date** to move three days forward. The reservation moves to Jamie, who can then collect it. Closing and restarting the demo starts fresh.
+
+For everyday use, run `make web`. The browser and the numbered menu both use `stackdesk.db` by default. To open a specific database or another local port, build with `make` and run `python3 web/server.py --db example.db --port 8766`. The server listens only on the local machine. Stop it with Ctrl+C. The coursework build on CS Academy uses `make` and `./main`, with no Python requirement for the terminal program.
+
+The workspace has an overview, editable catalog and reader records, circulation, reservation queues and reports with CSV download. **Smart Search** ranks title, author and ID matches in C++. It accepts multiple keywords, prefixes and one spelling edit or transposition in eligible words. For example, `pratical c++` finds *Practical C++*. Search runs entirely offline and can be filtered to currently available copies.
+
+The browser sends actions to a small Python standard library server in `web/server.py`. It dispatches them to the same compiled C++ program, which validates actions and saves the database. C++ also supplies the JSON snapshot and ranked search results from `web_view.cpp`. Run `make web-test` for the browser API scenarios.
 
 ## Desk workflow
 

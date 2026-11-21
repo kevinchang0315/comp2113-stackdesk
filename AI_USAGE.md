@@ -58,3 +58,16 @@ The automated checks compare real process output with expected output defined fr
 The first report implementation printed “1 days”. The final version uses “1 day” for the singular case and checks it in T12 and T13. File export and the database also use distinct extensions so an export and a database cannot be assigned the same path. T24 checks this separation.
 
 The group should append its actual follow-up prompts and its own review records here. For each review, record the reviewer, module, command or test ID, observed result, and any change made. Useful places to inspect are T04 for virtual dispatch, T11 for pickup timing, and T19 for rollback. Record the CS Academy result when the group has executed the build there.
+
+## Browser workspace follow-up
+
+The following project requests prompted the sample visualization and then the integrated English browser UI.
+
+~~~text
+这个系统可以visualize吗
+我想要你把这个优化UI放到github的c++ code,拉出一个broswer, 这样可以吗,然后system要英语的,你觉得要加加别功能吗,比如ai搜索?
+~~~
+
+Codex used actual C++ command outputs to verify the four states in the first visualization. It then implemented an English workspace with a local HTTP adapter and added ranked keyword searches with single-edit spelling tolerance in C++. Browser actions reuse the same checkout, return, reservation and persistence code as the numbered menu. The browser searches run offline by comparing text and do not use a language-model service.
+
+The verification used the 24 existing terminal cases, eight new browser API scenarios, and an actual browser walkthrough. The walkthrough returned the book, advanced the date and checked out the reserved copy as the next eligible reader. It also checked that searching for `pratical c++` highlighted a close match, and the API tests reopened a persistent database to confirm that browser edits still load in the terminal program.

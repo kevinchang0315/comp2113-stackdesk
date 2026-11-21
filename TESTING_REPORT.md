@@ -52,3 +52,20 @@ The [full transcripts](tests/TRANSCRIPTS.md) list exact command inputs, expected
 Pickup expiry is exclusive. A copy offered on January 1 can be collected through January 3. Starting the desk on January 8 still grants the next offers on their original expiry dates. T08 and T11 detect an incorrect implementation that postpones a pickup window to the day the desk reopens. T12 and T21 verify month turnover, leap days and the difference between a due date and an overdue day.
 
 T15 checks a real close-and-reopen cycle. T16 and T17 cover refusal to start with a damaged or missing primary. T19 exercises a disk write failure and compares the database bytes before and after. T23 starts two actual processes. Together these tests cover the expected single-workstation workflow. Abrupt power loss and the department's CS Academy server remain separate verification environments.
+
+## Browser workspace verification
+
+The terminal regression suite still passed **24 of 24** scenarios. The English browser workspace passed **8 of 8** API integration scenarios using the real C++ binary, loopback HTTP, and separate temporary databases. Run `make web-test` to reproduce these checks.
+
+| ID | Input and expected result | Actual |
+| --- | --- | --- |
+| W01 | Request the English library page and JavaScript assets. The files and same-origin policy should be served. | Pass |
+| W02 | Load the fictional demo. The snapshot should contain seven titles, six readers, the two policies, and the waiting queue. | Pass |
+| W03 | Search `bk101`, `jun structures`, `pratical C++` and `pracitcal`. The corresponding titles should be ranked and the misspellings marked. An unrelated query should return no matches. | Pass |
+| W04 | Attempt checkout as a waiting reader, then return the book as its borrower. The first request should fail and preserve disk bytes, and Taylor should receive a pickup through 23 November. | Pass |
+| W05 | Advance to 24 November, reload and check out as Jamie. Taylor's hold should expire, Jamie's should be ready through 26 November, and the new loan should be due on 8 December. | Pass |
+| W06 | Download the overdue report. The report should contain Database Design, Morgan Lam's ID, and nine days late on 24 November. | Pass |
+| W07 | Send requests with a different origin or host, invalid fields, and an unsupported action. They should be rejected and no draft should reach disk. | Pass |
+| W08 | Add and edit records through the browser API, change a reader tier, and restart against the same database. The existing loan should keep its original tier and both entry points should read the same records. | Pass |
+
+A browser walkthrough also verified the visible close-match search result, the return dialog, both pickup deadlines, and the checkout that cleared the queue. The original terminal build remains the CS Academy submission entry point.

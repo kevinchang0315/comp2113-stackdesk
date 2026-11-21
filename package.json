@@ -1,0 +1,7 @@
+{
+  "name": "stackdesk-local-preview",
+  "private": true,
+  "scripts": {
+    "dev": "make -s && python3 -B web/server.py --demo"
+  }
+}
