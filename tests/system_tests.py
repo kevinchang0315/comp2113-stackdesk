@@ -757,11 +757,14 @@ def separate_paths(c):
 
 
 def evidence(path, all_runs):
+    def present(text):
+        return "\n".join(line.rstrip() for line in text.splitlines()).rstrip() or "(empty)"
+
     sections = [
         "# System Test Transcripts",
         "",
         "Each scenario ran in a fresh temporary directory with test records. Commands in one scenario share its database when shown as separate executions.",
-        "The printed command uses ./main for portability. The path marker <case> identifies the temporary run directory.",
+        "The printed command uses ./main for portability. The path marker <case> identifies the temporary run directory. Trailing prompt whitespace is trimmed for display.",
     ]
     for index, (title, entries) in enumerate(all_runs, 1):
         sections += ["", f"## T{index:02} {title}", "", "**PASS**"]
@@ -774,11 +777,11 @@ def evidence(path, all_runs):
                 cmd, data, want, stdout, expected_exit, actual_exit, err_contains, stderr = entry
                 sections += ["", f"Command: {cmd}", "",
                              f"Expected exit: {expected_exit}. Actual exit: {actual_exit}.",
-                             "", "~~~text", "Standard input", data.rstrip() or "(empty)",
-                             "", "Expected stdout", want.rstrip() or "(empty)",
-                             "", "Actual stdout", stdout.rstrip() or "(empty)",
+                             "", "~~~text", "Standard input", present(data),
+                             "", "Expected stdout", present(want),
+                             "", "Actual stdout", present(stdout),
                              "", "Expected stderr", ("Contains " + err_contains) if err_contains else "(empty)",
-                             "", "Actual stderr", stderr.rstrip() or "(empty)", "~~~"]
+                             "", "Actual stderr", present(stderr), "~~~"]
     path.write_text("\n".join(sections)+"\n", encoding="utf-8")
 
 

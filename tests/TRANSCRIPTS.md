@@ -1,7 +1,7 @@
 # System Test Transcripts
 
 Each scenario ran in a fresh temporary directory with test records. Commands in one scenario share its database when shown as separate executions.
-The printed command uses ./main for portability. The path marker <case> identifies the temporary run directory.
+The printed command uses ./main for portability. The path marker <case> identifies the temporary run directory. Trailing prompt whitespace is trimmed for display.
 
 ## T01 Empty registry and read-only start
 
@@ -1912,7 +1912,7 @@ StackDesk  |  2026-01-01
   4  Reservations
   5  Reports
   0  Exit
-Select: 
+Select:
 Book catalog
   1  Add a book
   2  View a book by ID
@@ -1921,7 +1921,7 @@ Book catalog
   5  List books
   0  Back
 Select: Type :back to cancel this action.
-Book ID: 
+Book ID:
 Book catalog
   1  Add a book
   2  View a book by ID
@@ -1930,7 +1930,7 @@ Book catalog
   5  List books
   0  Back
 Select: Type :back to cancel this action.
-Book ID: Title: Author: Copies: 
+Book ID: Title: Author: Copies:
 Added book A
 
 Book catalog
@@ -1941,7 +1941,7 @@ Book catalog
   5  List books
   0  Back
 Select: Type :back to cancel this action.
-Book ID: 
+Book ID:
 A | The Study Book | Ana Reed | copies=2 available=2 ready=0
 
 Book catalog
