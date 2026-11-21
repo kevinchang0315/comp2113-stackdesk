@@ -1,0 +1,10 @@
+/main
+/build/
+*.db
+*.db.bak
+*.tmp
+__pycache__/
+.DS_Store
+*.db.lock/
+*.csv
+*.csv.export/
